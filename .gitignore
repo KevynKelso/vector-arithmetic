@@ -132,3 +132,6 @@ list_attr_celeba.csv
 list_bbox_celeba.csv
 list_eval_partition.csv
 list_landmarks_align_celeba.csv
+rsync-receiver/*
+
+.DS_Store
