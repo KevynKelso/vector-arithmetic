@@ -133,5 +133,6 @@ list_bbox_celeba.csv
 list_eval_partition.csv
 list_landmarks_align_celeba.csv
 rsync-receiver/*
+*.npz
 
 .DS_Store

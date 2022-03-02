@@ -67,10 +67,20 @@ def load_faces(directory, n_faces):
     return np.asarray(faces)
 
 
+def load_cropped_faces():
+    data = np.load("img_align_celeba.npz")
+    faces = data["arr_0"]
+    print("Loaded: ", faces.shape)
+
+    return faces
+
+
 def main():
-    all_faces = load_faces(DIRECTORY, 50000)
+    all_faces = load_faces(DIRECTORY, 26)
     print("Loaded: ", all_faces.shape)
     np.savez_compressed("img_align_celeba.npz", all_faces)
+    faces = load_cropped_faces()
+    plot_faces(faces, 5)
 
 
 if __name__ == "__main__":
