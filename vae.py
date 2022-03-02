@@ -106,11 +106,12 @@ def main():
     vae_model = vae(model_name)
     history = vae_model.fit(
         x_train,
-        epochs=50,
+        epochs=100,
         validation_data=x_valid,
         callbacks=[early_stopping],
         verbose=1,
     )
+    vae_model.save(f"models/{model_name}.h5")
 
     with open(f"histories/{model_name}.txt", "w") as f:
         f.write(f"{history}")
