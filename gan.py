@@ -1,10 +1,10 @@
-from keras.layers import (Conv2D, Conv2DTranspose, Dense, Dropout, Flatten,
-                          LeakyReLU, Reshape)
-from keras.models import Sequential
-from keras.optimizers import Adam
 from matplotlib import pyplot
 from numpy import load, ones, zeros
 from numpy.random import randint, randn
+from tensorflow.keras.layers import (Conv2D, Conv2DTranspose, Dense, Dropout,
+                                     Flatten, LeakyReLU, Reshape)
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
 
 
 def save_plot(examples, epoch, n=10):
