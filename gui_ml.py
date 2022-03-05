@@ -51,8 +51,8 @@ def run_input_output_img_ae(ae, file):
     return input_img, output_img
 
 
-def run_input_output_imgs(encoder, decoder, file):
-    input_img = Image.open(file).resize((IMG_WIDTH, IMG_HEIGHT))
+def run_input_output_imgs(encoder, decoder, img_np):
+    input_img = Image.fromarray((img_np * 255).astype(np.uint8))
     latent, output_img = encode_decode(encoder, decoder, input_img)
     output_img = Image.fromarray(output_img)
 

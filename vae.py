@@ -13,7 +13,7 @@ BATCH_SIZE = 512
 
 
 def load_real_samples():
-    data = np.load("img_align_celeba.npz")
+    data = np.load("img_align_celeba2.npz")
     X = data["arr_0"]
     X = X.astype("float32")
     X = (X - 127.5) / 127.5
@@ -104,6 +104,11 @@ def main():
     # x_valid = dataset[int(dataset.shape[0] * 0.8) :, :, :, :]
 
     vae_model = vae(model_name)
+
+    vae_model.load_weights("models/conv-vae-1.h5")
+    vae_model.save("models/conv-vae-1.h5")
+    return
+
     history = vae_model.fit(
         x_train,
         epochs=100,

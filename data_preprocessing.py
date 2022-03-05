@@ -68,7 +68,7 @@ def load_faces(directory, n_faces):
 
 
 def load_cropped_faces():
-    data = np.load("img_align_celeba.npz")
+    data = np.load("img_align_celeba2.npz")
     faces = data["arr_0"]
     print("Loaded: ", faces.shape)
 
@@ -76,11 +76,11 @@ def load_cropped_faces():
 
 
 def main():
-    all_faces = load_faces(DIRECTORY, 26)
+    all_faces = load_faces(DIRECTORY, 90)
     print("Loaded: ", all_faces.shape)
-    np.savez_compressed("img_align_celeba.npz", all_faces)
+    np.savez_compressed("img_align_celeba2.npz", all_faces)
     faces = load_cropped_faces()
-    plot_faces(faces, 5)
+    plot_faces(faces, 9)
 
 
 if __name__ == "__main__":
