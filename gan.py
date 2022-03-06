@@ -1,3 +1,6 @@
+import matplotlib as mpl
+
+mpl.use("Agg")  # Disable the need for X window environment
 from matplotlib import pyplot
 from numpy import load, ones, zeros
 from numpy.random import randint, randn
