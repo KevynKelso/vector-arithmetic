@@ -1,6 +1,5 @@
 import matplotlib as mpl
-
-mpl.use("Agg")  # Disable the need for X window environment
+# mpl.use("Agg")  # Disable the need for X window environment
 from matplotlib import pyplot
 from numpy import load, ones, zeros
 from numpy.random import randint, randn
@@ -44,6 +43,8 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     # save the generator model tile file
     filename = "generator_model_%03d.h5" % (epoch + 1)
     g_model.save(filename)
+    filename = "discriminator_model_%03d.h5" % (epoch + 1)
+    d_model.save(filename)
 
 
 def load_real_samples():

@@ -19,21 +19,18 @@ def main():
     avg_neutral_women_lv = np.mean(encoder.predict(neutral_women), axis=0)
     avg_neutral_men_lv = np.mean(encoder.predict(neutral_men), axis=0)
 
-    img = decoder.predict(np.asarray([avg_smiling_women_lv]))[0]
-    plt.imshow((img + 1) / 2.0)
-    plt.show()
+    # avg_smiling_women = decoder.predict(np.asarray([avg_smiling_women_lv]))[0]
+    # avg_neutral_women = decoder.predict(np.asarray([avg_neutral_women_lv]))[0]
+    # avg_neutral_men = decoder.predict(np.asarray([avg_neutral_men_lv]))[0]
 
-    return
+    # plt.imshow((avg_smiling_women + 1) / 2.0)
+    # plt.show()
+    # plt.imshow((avg_neutral_women + 1) / 2.0)
+    # plt.show()
+    # plt.imshow((avg_neutral_men + 1) / 2.0)
+    # plt.show()
 
-    avg_smiling_women = np.average(smiling_women, axis=0)
-    avg_neutral_women = np.average(neutral_women, axis=0)
-    avg_neutral_men = np.average(neutral_men, axis=0)
-
-    lv1 = encoder.predict(np.asarray([avg_smiling_women]))[0]
-    lv2 = encoder.predict(np.asarray([avg_neutral_women]))[0]
-    lv3 = encoder.predict(np.asarray([avg_neutral_men]))[0]
-
-    combined_vector = lv1 - lv2 + lv3
+    combined_vector = avg_smiling_women_lv - avg_neutral_women_lv * avg_neutral_men_lv
 
     output = decoder.predict(np.asarray([combined_vector]))
     plot_faces((output + 1) / 2.0, 1)
@@ -65,15 +62,9 @@ def plot_latent_space():
     plt.show()
 
 
-def test_new_model():
-    vae = load_model("./facenet/facenet_weights.h5")
-    vae.summary()
-
-
 if __name__ == "__main__":
     plt.axis("off")
-    test_new_model()
-    # main()
+    main()
     # plot_latent_space()
 # plot_faces((np.asarray([avg_smiling_women]) + 1) / 2.0, 1)
 # plot_faces((np.asarray([avg_neutral_women]) + 1) / 2.0, 1)
@@ -114,3 +105,10 @@ if __name__ == "__main__":
 # plt.show()
 # plt.imshow((lv3o + 1) / 2.0)
 # plt.show()
+# avg_smiling_women = np.average(smiling_women, axis=0)
+# avg_neutral_women = np.average(neutral_women, axis=0)
+# avg_neutral_men = np.average(neutral_men, axis=0)
+
+# lv1 = encoder.predict(np.asarray([avg_smiling_women]))[0]
+# lv2 = encoder.predict(np.asarray([avg_neutral_women]))[0]
+# lv3 = encoder.predict(np.asarray([avg_neutral_men]))[0]

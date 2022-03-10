@@ -1,29 +1,33 @@
-import glob
-import random
-from tkinter import BOTTOM, CENTER, Button, Label, Scale, Tk
+import threading
+from tkinter import BOTTOM, CENTER, Button, DoubleVar, Label, Scale, Tk
 
-import cv2
+import matplotlib.pyplot as plt
 import numpy as np
+from numpy.random import randn
 from PIL import Image, ImageTk
-
-from blur_detection import get_blur_factor
-from gui_ml import (encode_decode, get_ae, get_vae, run_image_ae,
-                    run_input_output_img_ae, run_input_output_imgs)
-from vae import load_real_samples
-
-g_latent = []
+from tensorflow.keras.models import load_model
 
 IMG_WIDTH = 80
 IMG_HEIGHT = 80
+updating = False
+
+# generate points in latent space as input for the generator
+def generate_latent_points(latent_dim, n_samples, n_classes=10):
+    # generate points in the latent space
+    x_input = randn(latent_dim * n_samples)
+    # reshape into a batch of inputs for the network
+    z_input = x_input.reshape(n_samples, latent_dim)
+    return z_input
 
 
-def get_tk_imgs(encoder, decoder, img_np):
-    img_pil, output_img, latent = run_input_output_imgs(encoder, decoder, img_np)
+def get_tk_imgs(g_model, latent_dim):
+    latent = generate_latent_points(latent_dim, 1)
+    X = g_model.predict(latent)[0]
+    X = ((X + 1) / 2.0 * 255 / np.max(X)).astype(np.uint8)
+    img_pil = Image.fromarray(X)
+    tk_img_output = ImageTk.PhotoImage(img_pil)
 
-    tk_img_input = ImageTk.PhotoImage(img_pil)
-    tk_img_output = ImageTk.PhotoImage(output_img)
-
-    return tk_img_input, tk_img_output, latent
+    return tk_img_output, latent[0]
 
 
 def set_scales_to_latent_vec(scales, latent_vec):
@@ -32,71 +36,79 @@ def set_scales_to_latent_vec(scales, latent_vec):
         scale.set(latent_val)
 
 
-def gui(dataset_np, encoder, decoder):
+def update_plot_thread(latent, plot_image):
+    global updating
+    if updating:
+        return
+
+    updating = True
+
+    plt.clf()
+    plt.hist(latent)
+    plt.savefig("test.png")
+    plot = ImageTk.PhotoImage(Image.open("test.png"))
+    plot_image.configure(image=plot)
+    plot_image.image = plot
+    updating = False
+
+
+def gui(g_model, latent_dim):
     ws = Tk()
     ws.title("Vector Arithmetic GUI")
+    scales = []
+    scale_values = []
 
-    def change_img(input_img_label, output_img_label, scales, length):
-        global g_latent
+    def change_img(g_model, output_img_label, latent_dim, plot_image):
+        output_img, latent = get_tk_imgs(g_model, latent_dim)
 
-        img_np = dataset_np[random.randint(0, length - 1)]
-        input_img_pil = Image.fromarray((img_np * 255).astype(np.uint8))
-        input_blur = get_blur_factor(input_img_pil)
-
-        input_img, output_img, latent = get_tk_imgs(encoder, decoder, img_np)
-        g_latent = latent
-
-        text = f"Input, blur:{input_blur}"
-        input_img_label.configure(image=input_img, text=text)
         output_img_label.configure(image=output_img)
-        input_img_label.image = input_img  # prevents garbage collection
-        input_img_label.text = text
         output_img_label.image = output_img
 
-        set_scales_to_latent_vec(scales, g_latent)
+        set_scales_to_latent_vec(scale_values, latent)
+        update_plot_thread(latent, plot_image)
 
-    def decode_new_latent(output_img, scales):
-        # need to build latent vector from scale values
-        new_latent = [
-            scale.get() for scale in scales
-        ]  # scales are already 'normalized'
-
-        output = decoder.predict([new_latent])[0]
-
-        output_pil = Image.fromarray((output * 255).astype(np.uint8))
-        output_blur = get_blur_factor(output_pil)
-
-        tk_img_output = ImageTk.PhotoImage(
-            Image.fromarray((output * 255).astype(np.uint8))
+    def decode_new_latent(output_img, plot_image):
+        new_latent = np.asarray([scale.get() for scale in scales]).reshape(
+            1, 100
+        )  # scales are already 'normalized'
+        x = threading.Thread(
+            target=update_plot_thread,
+            args=(
+                new_latent[0],
+                plot_image,
+            ),
         )
+        x.start()
 
-        text1 = f"Output, blur:{output_blur}"
-        output_img.configure(image=tk_img_output, text=text1)
-        output_img.image = tk_img_output
-        output_img.text = text1
+        X = g_model.predict(new_latent)[0]
+        X = ((X + 1) / 2.0 * 255 / np.max(X)).astype(np.uint8)
+        output_pil = Image.fromarray(X)
 
-    (
-        img_default_input,
-        img_default_output,
-        g_latent,
-    ) = get_tk_imgs(encoder, decoder, dataset_np[0])
+        tk_img = ImageTk.PhotoImage(output_pil)
 
-    input_image_vae = Label(
+        output_img.configure(image=tk_img)
+        output_img.image = tk_img
+
+    img_default_output, latent = get_tk_imgs(g_model, latent_dim)
+
+    output_image = Label(
         ws,
         justify=CENTER,
         compound=BOTTOM,
         pady=5,
-        text="Input image VAE",
-        image=img_default_input,
-    )
-    output_image_vae = Label(
-        ws,
-        justify=CENTER,
-        compound=BOTTOM,
-        pady=5,
-        text="Output image VAE",
+        text="Output image GAN",
         image=img_default_output,
     )
+    plot_image = Label(
+        ws,
+        justify=CENTER,
+        compound=BOTTOM,
+        pady=5,
+        text="Plot",
+    )
+    update_plot_thread(latent, plot_image)
+
+    scale_values = [DoubleVar() for _ in range(latent_dim)]
     scales = [
         Scale(
             ws,
@@ -104,30 +116,23 @@ def gui(dataset_np, encoder, decoder):
             to=5,
             resolution=1e-10,
             showvalue=0,
-            command=lambda _: decode_new_latent(output_image_vae, scales),
+            command=lambda _: decode_new_latent(output_image, plot_image),
+            variable=scale_values[i],
         )
-        for _ in range(g_latent.shape[0])
+        for i in range(latent_dim)
     ]
 
-    set_scales_to_latent_vec(scales, g_latent)
+    set_scales_to_latent_vec(scale_values, latent)
 
     button = Button(
         ws,
-        text="Change source image",
-        command=lambda: change_img(
-            input_image_vae, output_image_vae, scales, dataset_np.shape[0]
-        ),
+        text="Generate new image",
+        command=lambda: change_img(g_model, output_image, latent_dim, plot_image),
     )
-    # button2 = Button(
-    # ws,
-    # text="Reset sliders",
-    # command=lambda: set_scales_to_latent_vec(scales, g_latent),
-    # )
 
-    input_image_vae.grid(row=0, column=0)
+    output_image.grid(row=0, column=0)
     button.grid(row=1, column=0)
-    output_image_vae.grid(row=2, column=0)
-    # button2.grid(row=3, column=0)
+    plot_image.grid(row=2, column=0)
 
     num_cols = 50
     for i, scale in enumerate(scales):
@@ -137,9 +142,8 @@ def gui(dataset_np, encoder, decoder):
 
 
 def main():
-    dataset_np = load_real_samples()
-    encoder, decoder = get_vae("./models/conv-vae-1.h5")
-    gui(dataset_np, encoder, decoder)
+    model = load_model("./rsync-receiver/generator_model_040.h5")
+    gui(model, 100)
 
 
 if __name__ == "__main__":
