@@ -41,9 +41,9 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     # save plot
     save_plot(x_fake, epoch)
     # save the generator model tile file
-    filename = "generator_model_%03d.h5" % (epoch + 1)
+    filename = "generator_model_sm1_%03d.h5" % (epoch + 1)
     g_model.save(filename)
-    filename = "discriminator_model_%03d.h5" % (epoch + 1)
+    filename = "discriminator_model_sm1_%03d.h5" % (epoch + 1)
     d_model.save(filename)
 
 
@@ -152,16 +152,16 @@ def define_generator(latent_dim):
     model.add(LeakyReLU(alpha=0.2))
     model.add(Reshape((5, 5, 128)))
     # upsample to 10x10
-    model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2), padding="same"))
+    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
     model.add(LeakyReLU(alpha=0.2))
     # upsample to 20x20
-    model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2), padding="same"))
+    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
     model.add(LeakyReLU(alpha=0.2))
     # upsample to 40x40
-    model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2), padding="same"))
+    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
     model.add(LeakyReLU(alpha=0.2))
     # upsample to 80x80
-    model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2), padding="same"))
+    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
     model.add(LeakyReLU(alpha=0.2))
     # output layer 80x80x3
     model.add(Conv2D(3, (5, 5), activation="tanh", padding="same"))

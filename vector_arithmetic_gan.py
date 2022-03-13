@@ -34,46 +34,54 @@ def plot_generated(examples, rows, cols):
 
 # load model
 model = load_model("./rsync-receiver/generator_model_040.h5")
-# retrieve specific points
-smiling_woman_ix = [61, 62, 27]
-neutral_woman_ix = [16, 21, 49]
-neutral_man_ix = [10, 31, 82]
-# load the saved latent points
 data = load("latent_points.npz")
 points = data["arr_0"]
-# average vectors
-smiling_woman = average_points(points, smiling_woman_ix)
-neutral_woman = average_points(points, neutral_woman_ix)
-neutral_man = average_points(points, neutral_man_ix)
-# combine all vectors
-all_vectors = vstack((smiling_woman, neutral_woman, neutral_man))
-# generate images
+
+neutral_people_ix = [2, 7, 8, 10, 12, 16, 21, 22, 24, 39, 49, 76, 78, 81, 90]
+smiling_people_ix = [3, 4, 13, 15, 23, 27, 36, 45, 48, 53, 56, 57, 59, 60, 61]
+
+neutral_people = average_points(points, neutral_people_ix)
+smiling_people = average_points(points, smiling_people_ix)
+
+all_vectors = vstack((neutral_people, smiling_people))
 images = model.predict(all_vectors)
-# scale pixel values
 images = (images + 1) / 2.0
-# plot_generated(images, 3, 4)
+# plot_generated(images, 2, 16)
 
-# smiling woman - neutral woman + neutral man = smiling man
-smiling_feature = (
-    np.min(smiling_woman[:-1], axis=0) + 3 - (np.min(neutral_woman[:-1], axis=0) + 3)
-)
-test1 = model.predict(expand_dims(np.min(smiling_woman[:-1] + 4, axis=0), 0))[0]
-pyplot.imshow((test1 + 1) / 2.0)
-pyplot.show()
-test2 = model.predict(expand_dims(np.min(neutral_woman[:-1] + 4, axis=0), 0))[0]
-pyplot.imshow((test2 + 1) / 2.0)
-pyplot.show()
-
-test3 = model.predict(expand_dims(smiling_feature, 0))[0]
-pyplot.imshow((test3 + 1) / 2.0)
-pyplot.show()
-
-
-result_vector = neutral_man[-1] + smiling_feature
-# generate image
+result_vector = smiling_people[-1] / neutral_people[-1]
 result_vector = expand_dims(result_vector, 0)
+
 result_image = model.predict(result_vector)
-# scale pixel values
 result_image = (result_image + 1) / 2.0
 pyplot.imshow(result_image[0])
 pyplot.show()
+# retrieve specific points
+# smiling_woman_ix = [61, 62, 27]
+# neutral_woman_ix = [16, 21, 49]
+# neutral_man_ix = [10, 31, 82]
+# # load the saved latent points
+# data = load("latent_points.npz")
+# points = data["arr_0"]
+# images_dataset = model.predict(points)
+# plot_generated((images_dataset + 1) / 2.0, 10, 10)
+# # average vectors
+# smiling_woman = average_points(points, smiling_woman_ix)
+# neutral_woman = average_points(points, neutral_woman_ix)
+# neutral_man = average_points(points, neutral_man_ix)
+# # combine all vectors
+# all_vectors = vstack((smiling_woman, neutral_woman, neutral_man))
+# # generate images
+# images = model.predict(all_vectors)
+# # scale pixel values
+# images = (images + 1) / 2.0
+# plot_generated(images, 3, 4)
+
+# # smiling woman - neutral woman + neutral man = smiling man
+# result_vector = smiling_woman[-1] - neutral_woman[-1] + neutral_man[-1]
+# # generate image
+# result_vector = expand_dims(result_vector, 0)
+# result_image = model.predict(result_vector)
+# # scale pixel values
+# result_image = (result_image + 1) / 2.0
+# pyplot.imshow(result_image[0])
+# pyplot.show()
