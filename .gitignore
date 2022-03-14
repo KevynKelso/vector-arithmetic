@@ -137,5 +137,6 @@ rsync-reciever/*
 models/*
 *.npz
 *.png
+*.h5
 
 .DS_Store

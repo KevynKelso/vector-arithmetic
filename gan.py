@@ -144,6 +144,30 @@ def define_discriminator(in_shape=(80, 80, 3)):
     return model
 
 
+# def define_generator(latent_dim):
+# model = Sequential()
+# # foundation for 5x5 feature maps
+# n_nodes = 100 * 5 * 5
+# model.add(Dense(n_nodes, input_dim=latent_dim))
+# model.add(LeakyReLU(alpha=0.2))
+# model.add(Reshape((5, 5, 100)))
+# # upsample to 10x10
+# model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
+# model.add(LeakyReLU(alpha=0.2))
+# # upsample to 20x20
+# model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
+# model.add(LeakyReLU(alpha=0.2))
+# # upsample to 40x40
+# model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
+# model.add(LeakyReLU(alpha=0.2))
+# # upsample to 80x80
+# model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
+# model.add(LeakyReLU(alpha=0.2))
+# # output layer 80x80x3
+# model.add(Conv2D(3, (5, 5), activation="tanh", padding="same"))
+# return model
+
+
 def define_generator(latent_dim):
     model = Sequential()
     # foundation for 5x5 feature maps
@@ -152,17 +176,12 @@ def define_generator(latent_dim):
     model.add(LeakyReLU(alpha=0.2))
     model.add(Reshape((5, 5, 100)))
     # upsample to 10x10
-    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
+    model.add(Conv2DTranspose(100, (4, 4), strides=(4, 4), padding="same"))
     model.add(LeakyReLU(alpha=0.2))
     # upsample to 20x20
-    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
+    model.add(Conv2DTranspose(100, (4, 4), strides=(4, 4), padding="same"))
     model.add(LeakyReLU(alpha=0.2))
     # upsample to 40x40
-    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
-    # upsample to 80x80
-    model.add(Conv2DTranspose(100, (4, 4), strides=(2, 2), padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
     # output layer 80x80x3
     model.add(Conv2D(3, (5, 5), activation="tanh", padding="same"))
     return model
@@ -189,8 +208,6 @@ def main():
     d_model = define_discriminator()
     # create the generator
     g_model = define_generator(latent_dim)
-    g_model.summary()
-    return
     # create the gan
     gan_model = define_gan(g_model, d_model)
     # load image data
