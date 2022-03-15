@@ -1,4 +1,8 @@
+import matplotlib as mpl
+
+mpl.use("Agg")  # Disable the need for X window environment
 import tensorflow.keras.backend as K
+from matplotlib import pyplot
 from numpy import ones, zeros
 from numpy.random import randint
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
@@ -138,6 +142,43 @@ def ae():
     return ae
 
 
+def save_plot(examples, epoch, n=10):
+    # scale from [-1,1] to [0,1]
+    examples = (examples + 1) / 2.0
+    # plot images
+    for i in range(n * n):
+        # define subplot
+        pyplot.subplot(n, n, 1 + i)
+        # turn off axis
+        pyplot.axis("off")
+        # plot raw pixel data
+        pyplot.imshow(examples[i])
+    # save plot to file
+    filename = "generated_plot_e%03d.png" % (epoch + 1)
+    pyplot.savefig(filename)
+    pyplot.close()
+
+
+def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_samples=100):
+    # prepare real samples
+    X_real, y_real = generate_real_samples(dataset, n_samples)
+    # evaluate discriminator on real examples
+    _, acc_real = d_model.evaluate(X_real, y_real, verbose=0)
+    # prepare fake examples
+    x_fake, y_fake = generate_fake_samples(g_model, latent_dim, n_samples)
+    # evaluate discriminator on fake examples
+    _, acc_fake = d_model.evaluate(x_fake, y_fake, verbose=0)
+    # summarize discriminator performance
+    print(">Accuracy real: %.0f%%, fake: %.0f%%" % (acc_real * 100, acc_fake * 100))
+    # save plot
+    save_plot(x_fake, epoch)
+    # save the generator model tile file
+    filename = "generator_model_ae1_%03d.h5" % (epoch + 1)
+    g_model.save(filename)
+    filename = "discriminator_model_ae1_%03d.h5" % (epoch + 1)
+    d_model.save(filename)
+
+
 def generate_fake_samples(vae_model, latent_dim, n_samples, dataset):
     # choose random instances
     ix = randint(0, dataset.shape[0], n_samples)
@@ -184,8 +225,8 @@ def train(
                 % (i + 1, j + 1, bat_per_epo, d_loss1, d_loss2, g_loss)
             )
         # evaluate the model performance, sometimes
-        # if (i + 1) % 10 == 0:
-        # summarize_performance(i, g_model, d_model, dataset, latent_dim)
+        if (i + 1) % 10 == 0:
+            summarize_performance(i, vae_model, d_model, dataset, latent_dim)
 
 
 def main():
