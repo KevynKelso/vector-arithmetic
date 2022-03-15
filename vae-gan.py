@@ -1,11 +1,14 @@
 import tensorflow.keras.backend as K
+from numpy import ones, zeros
+from numpy.random import randint
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense, Flatten, Input,
                                      Lambda, Reshape)
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
-from gan import define_discriminator, define_gan
+from gan import (define_discriminator, define_gan, generate_real_samples,
+                 load_real_samples)
 
 
 def vae():
@@ -21,12 +24,18 @@ def vae():
     x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
     x = BatchNormalization()(x)
 
+    x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
+    x = BatchNormalization()(x)
+
     # shape_before_flattening = K.int_shape(x)
     x = Flatten()(x)
 
-    z_mu = Dense(latent_dim)(x)
+    z_mu = Dense(latent_dim, name="z_mu")(x)
     z_log_sigma = Dense(
-        latent_dim, kernel_initializer="zeros", bias_initializer="zeros"
+        latent_dim,
+        kernel_initializer="zeros",
+        bias_initializer="zeros",
+        name="z_log_sigma",
     )(x)
 
     # sampling function
@@ -40,21 +49,22 @@ def vae():
     # sample vector from the latent distribution
     z = Lambda(sampling)([z_mu, z_log_sigma])
 
-    encoder = Model(input_img, z)
+    # encoder = Model(input_img, z)
+    # encoder.summary()
     # decoder takes the latent distribution sample as input
     decoder_input = Input(K.int_shape(z)[1:])
     x = Dense(
-        4096, activation="relu", name="intermediate_decoder", input_shape=(latent_dim,)
+        3200, activation="relu", name="intermediate_decoder", input_shape=(latent_dim,)
     )(decoder_input)
-    x = Reshape((8, 8, 64))(x)
+    x = Reshape((5, 5, 128))(x)
 
-    x = Conv2DTranspose(32, (3, 3), strides=2, padding="same")(x)
+    x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
     x = BatchNormalization()(x)
 
-    x = Conv2DTranspose(16, (3, 3), strides=2, padding="same")(x)
+    x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
     x = BatchNormalization()(x)
 
-    x = Conv2DTranspose(8, (3, 3), strides=2, padding="same")(x)
+    x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
     x = BatchNormalization()(x)
 
     x = Conv2DTranspose(3, (3, 3), strides=2, padding="same", activation="sigmoid")(x)
@@ -79,17 +89,73 @@ def vae():
         return reconst_loss + kl_loss
 
     # VAE model statement
-    vae = Model(input_img, pred)
+    vae = Model(input_img, pred, name="VAE")
     vae.add_loss(vae_loss(input_img, pred))
-    optimizer = Adam(learning_rate=0.0005)
-    vae.compile(optimizer=optimizer, loss=None)
+    # optimizer = Adam(learning_rate=0.0005)
+    # vae.compile(optimizer=optimizer, loss=None)
 
-    vae.summary()
-    return
+    # vae.summary()
+    return vae
+
+
+def generate_fake_samples(vae_model, latent_dim, n_samples, dataset):
+    # choose random instances
+    ix = randint(0, dataset.shape[0], n_samples)
+    # retrieve selected images
+    x_input = dataset[ix]
+    # use VAE to reconstruct some dataset images
+    X = vae_model.predict(x_input)
+    # create 'fake' class labels (0)
+    y = zeros((n_samples, 1))
+
+    return X, y
+
+
+def train(
+    vae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=128
+):
+    bat_per_epo = int(dataset.shape[0] / n_batch)
+    half_batch = int(n_batch / 2)
+    # manually enumerate epochs
+    for i in range(n_epochs):
+        # enumerate batches over the training set
+        for j in range(bat_per_epo):
+            # get randomly selected 'real' samples
+            X_real, y_real = generate_real_samples(dataset, half_batch)
+            # update discriminator model weights
+            d_loss1, _ = d_model.train_on_batch(X_real, y_real)
+            # generate 'fake' examples
+            X_fake, y_fake = generate_fake_samples(
+                vae_model, latent_dim, half_batch, dataset
+            )
+            # update discriminator model weights
+            d_loss2, _ = d_model.train_on_batch(X_fake, y_fake)
+            # prepare points in latent space as input for the generator
+            # X_gan = generate_latent_points(latent_dim, n_batch)
+            ix = randint(0, dataset.shape[0], n_batch)
+            X_gan = dataset[ix]
+            # create inverted labels for the fake samples
+            y_gan = ones((n_batch, 1))
+            # update the generator via the discriminator's error
+            g_loss = gan_model.train_on_batch(X_gan, y_gan)
+            # summarize loss on this batch
+            print(
+                ">%d, %d/%d, d1=%.3f, d2=%.3f g=%.3f"
+                % (i + 1, j + 1, bat_per_epo, d_loss1, d_loss2, g_loss)
+            )
+        # evaluate the model performance, sometimes
+        # if (i + 1) % 10 == 0:
+        # summarize_performance(i, g_model, d_model, dataset, latent_dim)
 
 
 def main():
-    pass
+    dataset = load_real_samples()
+    d_model = define_discriminator()
+    vae_model = vae()
+
+    gan_model = define_gan(vae_model, d_model)
+
+    train(vae_model, d_model, gan_model, dataset, 128)
 
 
 if __name__ == "__main__":

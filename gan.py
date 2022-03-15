@@ -118,7 +118,7 @@ def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batc
 
 
 def define_discriminator(in_shape=(80, 80, 3)):
-    model = Sequential()
+    model = Sequential(name="discriminator")
     # normal
     model.add(Conv2D(128, (5, 5), padding="same", input_shape=in_shape))
     model.add(LeakyReLU(alpha=0.2))
