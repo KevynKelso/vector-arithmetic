@@ -165,7 +165,7 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     # evaluate discriminator on real examples
     _, acc_real = d_model.evaluate(X_real, y_real, verbose=0)
     # prepare fake examples
-    x_fake, y_fake = generate_fake_samples(g_model, latent_dim, n_samples)
+    x_fake, y_fake = generate_fake_samples(g_model, latent_dim, n_samples, dataset)
     # evaluate discriminator on fake examples
     _, acc_fake = d_model.evaluate(x_fake, y_fake, verbose=0)
     # summarize discriminator performance
