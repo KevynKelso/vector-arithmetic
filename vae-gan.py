@@ -7,12 +7,12 @@ from numpy import ones, zeros
 from numpy.random import randint
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense, Flatten, Input,
-                                     Lambda, Reshape)
-from tensorflow.keras.models import Model
+                                     Lambda, LeakyReLU, Reshape)
+from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import Adam
 
-from gan import (define_discriminator, define_gan, generate_real_samples,
-                 load_real_samples)
+from gan import (define_discriminator, define_gan, define_generator,
+                 generate_real_samples, load_real_samples)
 
 # def vae():
 # latent_dim = 128  # Number of latent dimension parameters
@@ -99,45 +99,71 @@ from gan import (define_discriminator, define_gan, generate_real_samples,
 
 # # vae.summary()
 # return vae
-def ae():
-    latent_dim = 128  # Number of latent dimension parameters
-    input_img = Input(shape=(80, 80, 3))
+# AE VERSION 1
+# def ae():
+# latent_dim = 128  # Number of latent dimension parameters
+# input_img = Input(shape=(80, 80, 3))
 
-    x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(input_img)
-    x = BatchNormalization()(x)
+# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(input_img)
+# x = BatchNormalization()(x)
 
-    x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-    x = BatchNormalization()(x)
+# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
+# x = BatchNormalization()(x)
 
-    x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-    x = BatchNormalization()(x)
+# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
+# x = BatchNormalization()(x)
 
-    x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-    x = BatchNormalization()(x)
+# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
+# x = BatchNormalization()(x)
 
-    # shape_before_flattening = K.int_shape(x)
-    x = Flatten()(x)
+# # shape_before_flattening = K.int_shape(x)
+# x = Flatten()(x)
 
-    x = Dense(latent_dim, activation="relu")(x)
+# x = Dense(latent_dim, activation="relu")(x)
 
-    x = Dense(
-        3200, activation="relu", name="intermediate_decoder", input_shape=(latent_dim,)
-    )(x)
-    x = Reshape((5, 5, 128))(x)
+# x = Dense(
+# 3200, activation="relu", name="intermediate_decoder", input_shape=(latent_dim,)
+# )(x)
+# x = Reshape((5, 5, 128))(x)
 
-    x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-    x = BatchNormalization()(x)
+# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
+# x = BatchNormalization()(x)
 
-    x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-    x = BatchNormalization()(x)
+# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
+# x = BatchNormalization()(x)
 
-    x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-    x = BatchNormalization()(x)
+# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
+# x = BatchNormalization()(x)
 
-    x = Conv2DTranspose(3, (3, 3), strides=2, padding="same", activation="sigmoid")(x)
+# x = Conv2DTranspose(3, (3, 3), strides=2, padding="same", activation="sigmoid")(x)
 
-    # AE model statement
-    ae = Model(input_img, x, name="AE")
+# # AE model statement
+# ae = Model(input_img, x, name="AE")
+
+# return ae
+# AE VERSION 2, based almost entirely on discriminator / generator
+def ae(in_shape=(80, 80, 3)):
+    latent_dim = 100
+    model = Sequential(name="Encoder")
+    # normal
+    model.add(Conv2D(128, (5, 5), padding="same", input_shape=in_shape))
+    model.add(LeakyReLU(alpha=0.2))
+    # downsample to 40x40
+    model.add(Conv2D(128, (5, 5), strides=(2, 2), padding="same"))
+    model.add(LeakyReLU(alpha=0.2))
+    # downsample to 20x30
+    model.add(Conv2D(128, (5, 5), strides=(2, 2), padding="same"))
+    model.add(LeakyReLU(alpha=0.2))
+    # downsample to 10x10
+    model.add(Conv2D(128, (5, 5), strides=(2, 2), padding="same"))
+    model.add(LeakyReLU(alpha=0.2))
+    # downsample to 5x5
+    model.add(Conv2D(128, (5, 5), strides=(2, 2), padding="same"))
+    model.add(LeakyReLU(alpha=0.2))
+    # classifier
+    model.add(Flatten())
+    model.add(Dense(latent_dim, activation="relu"))
+    model.add(define_generator(latent_dim))
 
     return ae
 
@@ -205,7 +231,7 @@ def train(ae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_bat
             d_loss1, _ = d_model.train_on_batch(X_real, y_real)
 
             # updae AE model weights
-            ae_loss1, _ = ae_model.train_on_batch(X_real, X_real)
+            # ae_loss1, _ = ae_model.train_on_batch(X_real, X_real)
 
             # generate 'fake' examples
             X_fake, y_fake = generate_fake_samples(
@@ -223,7 +249,7 @@ def train(ae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_bat
             g_loss = gan_model.train_on_batch(X_gan, y_gan)
             # summarize loss on this batch
             print(
-                f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}, g={g_loss:.3f}, ae={ae_loss1:.3f}"
+                f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}, g={g_loss:.3f}"
             )
         # evaluate the model performance, sometimes
         # if (i + 1) % 10 == 0:
