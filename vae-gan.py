@@ -173,9 +173,9 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     # save plot
     save_plot(x_fake, epoch)
     # save the generator model tile file
-    filename = "generator_model_ae1_%03d.h5" % (epoch + 1)
+    filename = "generator_model_ae2_%03d.h5" % (epoch + 1)
     g_model.save(filename)
-    filename = "discriminator_model_ae1_%03d.h5" % (epoch + 1)
+    filename = "discriminator_model_ae2_%03d.h5" % (epoch + 1)
     d_model.save(filename)
 
 
@@ -192,9 +192,7 @@ def generate_fake_samples(vae_model, latent_dim, n_samples, dataset):
     return X, y
 
 
-def train(
-    vae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=128
-):
+def train(ae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=128):
     bat_per_epo = int(dataset.shape[0] / n_batch)
     half_batch = int(n_batch / 2)
     # manually enumerate epochs
@@ -205,9 +203,13 @@ def train(
             X_real, y_real = generate_real_samples(dataset, half_batch)
             # update discriminator model weights
             d_loss1, _ = d_model.train_on_batch(X_real, y_real)
+
+            # updae AE model weights
+            ae_loss1, _ = ae_model.train_on_batch(X_real, X_real)
+
             # generate 'fake' examples
             X_fake, y_fake = generate_fake_samples(
-                vae_model, latent_dim, half_batch, dataset
+                ae_model, latent_dim, half_batch, dataset
             )
             # update discriminator model weights
             d_loss2, _ = d_model.train_on_batch(X_fake, y_fake)
@@ -221,12 +223,11 @@ def train(
             g_loss = gan_model.train_on_batch(X_gan, y_gan)
             # summarize loss on this batch
             print(
-                ">%d, %d/%d, d1=%.3f, d2=%.3f g=%.3f"
-                % (i + 1, j + 1, bat_per_epo, d_loss1, d_loss2, g_loss)
+                f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}, g={g_loss:.3f}, ae={ae_loss1:.3f}"
             )
         # evaluate the model performance, sometimes
-        if (i + 1) % 10 == 0:
-            summarize_performance(i, vae_model, d_model, dataset, latent_dim)
+        # if (i + 1) % 10 == 0:
+        summarize_performance(i, ae_model, d_model, dataset, latent_dim)
 
 
 def main():
