@@ -1,146 +1,22 @@
 import matplotlib as mpl
+from tensorflow.python.keras.engine import data_adapter
+from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError
+from tensorflow.keras.optimizers import Adam
+import tensorflow as tf
 
 mpl.use("Agg")  # Disable the need for X window environment
-import tensorflow.keras.backend as K
 from matplotlib import pyplot
 from numpy import ones, zeros
 from numpy.random import randint
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense, Flatten, Input,
                                      Lambda, LeakyReLU, Reshape)
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import Sequential
 
-from gan import (define_discriminator, define_gan, define_generator,
+from gan import (define_discriminator, define_generator,
                  generate_real_samples, load_real_samples)
 
-# def vae():
-# latent_dim = 128  # Number of latent dimension parameters
-# input_img = Input(shape=(80, 80, 3))
 
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(input_img)
-# x = BatchNormalization()(x)
-
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-# x = BatchNormalization()(x)
-
-# # shape_before_flattening = K.int_shape(x)
-# x = Flatten()(x)
-
-# z_mu = Dense(latent_dim, name="z_mu")(x)
-# z_log_sigma = Dense(
-# latent_dim,
-# kernel_initializer="zeros",
-# bias_initializer="zeros",
-# name="z_log_sigma",
-# )(x)
-
-# # sampling function
-# def sampling(args):
-# z_mu, z_log_sigma = args
-# epsilon = K.random_normal(
-# shape=(K.shape(z_mu)[0], latent_dim), mean=0.0, stddev=1.0
-# )
-# return z_mu + K.exp(z_log_sigma) * epsilon
-
-# # sample vector from the latent distribution
-# z = Lambda(sampling)([z_mu, z_log_sigma])
-
-# # encoder = Model(input_img, z)
-# # encoder.summary()
-# # decoder takes the latent distribution sample as input
-# decoder_input = Input(K.int_shape(z)[1:])
-# x = Dense(
-# 3200, activation="relu", name="intermediate_decoder", input_shape=(latent_dim,)
-# )(decoder_input)
-# x = Reshape((5, 5, 128))(x)
-
-# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2DTranspose(3, (3, 3), strides=2, padding="same", activation="sigmoid")(x)
-
-# # decoder model statement
-# decoder = Model(decoder_input, x)
-
-# # apply the decoder to the sample from the latent distribution
-# pred = decoder(z)
-
-# def vae_loss(x, pred):
-# x = K.flatten(x)
-# pred = K.flatten(pred)
-# # Reconstruction loss
-# reconst_loss = 1000 * K.mean(K.square(x - pred))
-
-# # KL divergence
-# kl_loss = -0.5 * K.mean(
-# 1 + z_log_sigma - K.square(z_mu) - K.exp(z_log_sigma), axis=-1
-# )
-
-# return reconst_loss + kl_loss
-
-# # VAE model statement
-# vae = Model(input_img, pred, name="VAE")
-# vae.add_loss(vae_loss(input_img, pred))
-# # optimizer = Adam(learning_rate=0.0005)
-# # vae.compile(optimizer=optimizer, loss=None)
-
-# # vae.summary()
-# return vae
-# AE VERSION 1
-# def ae():
-# latent_dim = 128  # Number of latent dimension parameters
-# input_img = Input(shape=(80, 80, 3))
-
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(input_img)
-# x = BatchNormalization()(x)
-
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2D(128, (3, 3), activation="relu", padding="same", strides=2)(x)
-# x = BatchNormalization()(x)
-
-# # shape_before_flattening = K.int_shape(x)
-# x = Flatten()(x)
-
-# x = Dense(latent_dim, activation="relu")(x)
-
-# x = Dense(
-# 3200, activation="relu", name="intermediate_decoder", input_shape=(latent_dim,)
-# )(x)
-# x = Reshape((5, 5, 128))(x)
-
-# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2DTranspose(128, (3, 3), strides=2, padding="same")(x)
-# x = BatchNormalization()(x)
-
-# x = Conv2DTranspose(3, (3, 3), strides=2, padding="same", activation="sigmoid")(x)
-
-# # AE model statement
-# ae = Model(input_img, x, name="AE")
-
-# return ae
 # AE VERSION 2, based almost entirely on discriminator / generator
 def ae(in_shape=(80, 80, 3)):
     latent_dim = 100
@@ -165,7 +41,7 @@ def ae(in_shape=(80, 80, 3)):
     model.add(Dense(latent_dim, activation="relu"))
     model.add(define_generator(latent_dim))
 
-    return ae
+    return model
 
 
 def save_plot(examples, epoch, n=10):
@@ -185,13 +61,13 @@ def save_plot(examples, epoch, n=10):
     pyplot.close()
 
 
-def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_samples=100):
+def summarize_performance(epoch, g_model, d_model, dataset, n_samples=100):
     # prepare real samples
     X_real, y_real = generate_real_samples(dataset, n_samples)
     # evaluate discriminator on real examples
     _, acc_real = d_model.evaluate(X_real, y_real, verbose=0)
     # prepare fake examples
-    x_fake, y_fake = generate_fake_samples(g_model, latent_dim, n_samples, dataset)
+    x_fake, y_fake = generate_fake_samples(g_model, n_samples, dataset)
     # evaluate discriminator on fake examples
     _, acc_fake = d_model.evaluate(x_fake, y_fake, verbose=0)
     # summarize discriminator performance
@@ -205,7 +81,7 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
     d_model.save(filename)
 
 
-def generate_fake_samples(vae_model, latent_dim, n_samples, dataset):
+def generate_fake_samples(vae_model, n_samples, dataset):
     # choose random instances
     ix = randint(0, dataset.shape[0], n_samples)
     # retrieve selected images
@@ -218,7 +94,8 @@ def generate_fake_samples(vae_model, latent_dim, n_samples, dataset):
     return X, y
 
 
-def train(ae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=128):
+# def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
+def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
     bat_per_epo = int(dataset.shape[0] / n_batch)
     half_batch = int(n_batch / 2)
     # manually enumerate epochs
@@ -234,13 +111,10 @@ def train(ae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_bat
             # ae_loss1, _ = ae_model.train_on_batch(X_real, X_real)
 
             # generate 'fake' examples
-            X_fake, y_fake = generate_fake_samples(
-                ae_model, latent_dim, half_batch, dataset
-            )
+            X_fake, y_fake = generate_fake_samples(ae_model, half_batch, dataset)
             # update discriminator model weights
             d_loss2, _ = d_model.train_on_batch(X_fake, y_fake)
             # prepare points in latent space as input for the generator
-            # X_gan = generate_latent_points(latent_dim, n_batch)
             ix = randint(0, dataset.shape[0], n_batch)
             X_gan = dataset[ix]
             # create inverted labels for the fake samples
@@ -253,17 +127,64 @@ def train(ae_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_bat
             )
         # evaluate the model performance, sometimes
         # if (i + 1) % 10 == 0:
-        summarize_performance(i, ae_model, d_model, dataset, latent_dim)
+        summarize_performance(i, ae_model, d_model, dataset)
 
+def define_gan(g_model, d_model):
+    # make weights in the discriminator not trainable
+    d_model.trainable = False
+    # connect them
+    # model = Sequential()
+    model = VAEGAN(g_model)
+    # add generator
+    model.add(g_model)
+    # add the discriminator
+    model.add(d_model)
+    # compile model
+    opt = Adam(lr=0.0002, beta_1=0.5)
+    model.compile(my_loss=loss_wapper(g_model, 1, 1), optimizer=opt)
+
+    return model
+
+
+def loss_wapper(g_model, alpha, beta):
+    mse = MeanSquaredError()
+    bce = BinaryCrossentropy(from_logits=True)
+
+    def loss(x, y_true, y_pred):
+        y = g_model(x)
+        ae_loss = alpha * mse(x, y)
+        gan_loss = beta * bce(y_true, y_pred)
+        print(f"ae_loss = {ae_loss.numpy()} gan_loss = {gan_loss}")
+        return ae_loss + gan_loss
+
+    return loss
+
+class VAEGAN(tf.keras.Sequential):
+    def compile(self, optimizer, my_loss):
+        super().compile(optimizer)
+        self.my_loss = my_loss
+
+    def train_step(self, data):
+        # data = data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+
+        with tf.GradientTape() as tape:
+            y_pred = self(x, training=True)
+            loss_value = self.my_loss(x, y, y_pred)
+
+        grads = tape.gradient(loss_value, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
+
+        return {"loss_value": loss_value}
 
 def main():
     dataset = load_real_samples()
     d_model = define_discriminator()
-    ae_model = ae()
+    ae_model = ae()  # AE model is generator
 
     gan_model = define_gan(ae_model, d_model)
 
-    train(ae_model, d_model, gan_model, dataset, 128)
+    train(ae_model, d_model, gan_model, dataset)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,12 @@
 import matplotlib as mpl
 # mpl.use("Agg")  # Disable the need for X window environment
+import tensorflow as tf
 from matplotlib import pyplot
 from numpy import load, ones, zeros
 from numpy.random import randint, randn
 from tensorflow.keras.layers import (Conv2D, Conv2DTranspose, Dense, Dropout,
                                      Flatten, LeakyReLU, Reshape)
+from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 
@@ -168,23 +170,23 @@ def define_generator(latent_dim):
     return model
 
 
-def define_generator(latent_dim):
-    model = Sequential()
-    # foundation for 5x5 feature maps
-    n_nodes = 100 * 5 * 5
-    model.add(Dense(n_nodes, input_dim=latent_dim))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Reshape((5, 5, 100)))
-    # upsample to 10x10
-    model.add(Conv2DTranspose(100, (4, 4), strides=(4, 4), padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
-    # upsample to 20x20
-    model.add(Conv2DTranspose(100, (4, 4), strides=(4, 4), padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
-    # upsample to 40x40
-    # output layer 80x80x3
-    model.add(Conv2D(3, (5, 5), activation="tanh", padding="same"))
-    return model
+# def define_generator(latent_dim):
+# model = Sequential()
+# # foundation for 5x5 feature maps
+# n_nodes = 100 * 5 * 5
+# model.add(Dense(n_nodes, input_dim=latent_dim))
+# model.add(LeakyReLU(alpha=0.2))
+# model.add(Reshape((5, 5, 100)))
+# # upsample to 10x10
+# model.add(Conv2DTranspose(100, (4, 4), strides=(4, 4), padding="same"))
+# model.add(LeakyReLU(alpha=0.2))
+# # upsample to 20x20
+# model.add(Conv2DTranspose(100, (4, 4), strides=(4, 4), padding="same"))
+# model.add(LeakyReLU(alpha=0.2))
+# # upsample to 40x40
+# # output layer 80x80x3
+# model.add(Conv2D(3, (5, 5), activation="tanh", padding="same"))
+# return model
 
 
 def define_gan(g_model, d_model):
@@ -198,8 +200,24 @@ def define_gan(g_model, d_model):
     model.add(d_model)
     # compile model
     opt = Adam(lr=0.0002, beta_1=0.5)
-    model.compile(loss="binary_crossentropy", optimizer=opt)
+    model.compile(loss=loss_wapper(g_model, 1, 1), optimizer=opt)
+
     return model
+
+
+def loss_wapper(g_model, alpha, beta):
+    mse = MeanSquaredError()
+    bce = BinaryCrossentropy(from_logits=True)
+
+    def loss(x, y_true, y_pred):
+        # y = g_model(x)
+        # ae_loss = alpha * mse(x, y).numpy()
+        # gan_loss = beta * bce(x, d).numpy()
+        # print(f"ae_loss = {ae_loss} gan_loss = {gan_loss}")
+        return 1
+        # return ae_loss + gan_loss
+
+    return loss
 
 
 def main():
