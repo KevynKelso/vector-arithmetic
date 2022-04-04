@@ -1,7 +1,8 @@
 import matplotlib as mpl
 import tensorflow as tf
 import tensorflow.keras.backend as K
-# mpl.use("Agg")  # Disable the need for X window environment
+
+mpl.use("Agg")  # Disable the need for X window environment
 from matplotlib import pyplot
 from numpy import ones, zeros
 from numpy.random import randint
@@ -112,8 +113,8 @@ def generate_fake_samples(vae_model, n_samples, dataset):
     return X, y
 
 
-# def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
-def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
+def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
+    # def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
     bat_per_epo = int(dataset.shape[0] / n_batch)
     half_batch = int(n_batch / 2)
     # manually enumerate epochs
@@ -219,13 +220,14 @@ def main():
     # ae_model.fit(x=dataset, y=dataset, epochs=10, batch_size=1, callbacks=[early_stopping])
     # ae_model.save("ae_generator_1.h5")
     # output_imgs = ae_model(dataset)
-    # output_imgs = (output_imgs + 1) / 2.0
+    # output_imgs = (dataset + 1) / 2.0
     # for i in range(20):
     # pyplot.subplot(5, 4, i + 1)
     # pyplot.axis("off")
     # pyplot.imshow(output_imgs[i])
-    # pyplot.savefig("ae_training_test.png")
+    # pyplot.savefig("dataset_original.png")
     # pyplot.close()
+    # return
 
     gan_model = define_gan(ae_model, d_model)
 
