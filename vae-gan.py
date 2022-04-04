@@ -1,22 +1,20 @@
 import matplotlib as mpl
-from tensorflow.keras.callbacks import EarlyStopping
-import tensorflow.keras.backend as K
-from tensorflow.python.keras.engine import data_adapter
-from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError
-from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
-
+import tensorflow.keras.backend as K
 # mpl.use("Agg")  # Disable the need for X window environment
 from matplotlib import pyplot
 from numpy import ones, zeros
 from numpy.random import randint
+from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import (BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense, Flatten, Input,
                                      Lambda, LeakyReLU, Reshape)
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras.engine import data_adapter
 
-from gan import (define_discriminator, 
-                 generate_real_samples, load_real_samples)
+from gan import define_discriminator, generate_real_samples, load_real_samples
 
 
 # AE VERSION 2, based almost entirely on discriminator / generator
@@ -95,9 +93,9 @@ def summarize_performance(epoch, g_model, d_model, dataset, n_samples=100):
     # save plot
     save_plot(x_fake, epoch)
     # save the generator model tile file
-    filename = "generator_model_ae2_%03d.h5" % (epoch + 1)
+    filename = "generator_model_ae3_%03d.h5" % (epoch + 1)
     g_model.save(filename)
-    filename = "discriminator_model_ae2_%03d.h5" % (epoch + 1)
+    filename = "discriminator_model_ae3_%03d.h5" % (epoch + 1)
     d_model.save(filename)
 
 
@@ -139,35 +137,37 @@ def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
             g_loss = gan_model.train_on_batch(X_gan, y_gan)
             # summarize loss on this batch
             print(
-                # f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}, g={g_loss:.3f}"
-                f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}"
+                f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}, g={g_loss:.3f}"
+                # f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}"
             )
         # evaluate the model performance, sometimes
         # if (i + 1) % 10 == 0:
         summarize_performance(i, ae_model, d_model, dataset)
 
+
 def define_gan(g_model, d_model):
     # make weights in the discriminator not trainable
     d_model.trainable = False
     # connect them
-    # model = Sequential()
-    model = VAEGAN(g_model)
+    model = Sequential()
+    # model = VAEGAN(g_model)
     # add generator
     model.add(g_model)
 
-    def ae_loss(x, pred):
-        x = K.flatten(x)
-        pred = K.flatten(pred)
-        reconst_loss = 1000 * K.mean(K.square(x - pred))
-        return reconst_loss
+    # def ae_loss(x, pred):
+    # x = K.flatten(x)
+    # pred = K.flatten(pred)
+    # reconst_loss = 1000 * K.mean(K.square(x - pred))
+    # return reconst_loss
 
-    model.add_loss(ae_loss(model.input, model.output))
+    # model.add_loss(ae_loss(model.input, model.output))
 
     # add the discriminator
     model.add(d_model)
     # compile model
     opt = Adam(lr=0.0002, beta_1=0.5)
-    model.compile(my_loss=loss_wapper(g_model, 1, 1), optimizer=opt)
+    # model.compile(my_loss=loss_wapper(g_model, 1, 1), optimizer=opt)
+    model.compile(loss="binary_crossentropy", optimizer=opt)
 
     return model
 
@@ -184,6 +184,7 @@ def loss_wapper(g_model, alpha, beta):
         return ae_loss + gan_loss
 
     return loss
+
 
 class VAEGAN(tf.keras.Sequential):
     def compile(self, optimizer, my_loss, run_eagerly=True):
@@ -203,32 +204,32 @@ class VAEGAN(tf.keras.Sequential):
 
         return {"loss": loss_value}
 
+
 def main():
     dataset = load_real_samples()
-    # d_model = define_discriminator()
-    ae_model = ae()  # AE model is generator
-    early_stopping = EarlyStopping(
-        monitor="loss", min_delta=0, patience=10, verbose=5, mode="auto"
-    )
-    opt = Adam(lr=0.0002, beta_1=0.5)
-    ae_model.compile(optimizer=opt, loss='mse')
+    d_model = define_discriminator()
+    ae_model = load_model("ae_generator_1.h5")
+    # ae_model = ae()  # AE model is generator
+    # early_stopping = EarlyStopping(
+    # monitor="loss", min_delta=0, patience=10, verbose=5, mode="auto"
+    # )
+    # opt = Adam(lr=0.0002, beta_1=0.5)
+    # ae_model.compile(optimizer=opt, loss='mse')
 
-    ae_model.fit(x=dataset, y=dataset, epochs=10, batch_size=1, callbacks=[early_stopping])
-    ae_model.save("ae_generator_1.h5")
-    output_imgs = ae_model(dataset)
-    output_imgs = (output_imgs + 1) / 2.0
-    for i in range(20):
-        pyplot.subplot(5, 4, i +1)
-        pyplot.axis("off")
-        pyplot.imshow(output_imgs[i])
-    pyplot.savefig("ae_training_test.png")
-    pyplot.close()
+    # ae_model.fit(x=dataset, y=dataset, epochs=10, batch_size=1, callbacks=[early_stopping])
+    # ae_model.save("ae_generator_1.h5")
+    # output_imgs = ae_model(dataset)
+    # output_imgs = (output_imgs + 1) / 2.0
+    # for i in range(20):
+    # pyplot.subplot(5, 4, i + 1)
+    # pyplot.axis("off")
+    # pyplot.imshow(output_imgs[i])
+    # pyplot.savefig("ae_training_test.png")
+    # pyplot.close()
 
+    gan_model = define_gan(ae_model, d_model)
 
-
-    # gan_model = define_gan(ae_model, d_model)
-
-    # train(ae_model, d_model, gan_model, dataset)
+    train(ae_model, d_model, gan_model, dataset)
 
 
 if __name__ == "__main__":
