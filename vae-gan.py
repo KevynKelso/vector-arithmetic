@@ -185,7 +185,7 @@ def define_gan(g_model, d_model):
 
 def loss_wapper(g_model, alpha, beta):
     mse = MeanSquaredError()
-    bce = BinaryCrossentropy(from_logits=True)
+    bce = BinaryCrossentropy()
 
     def loss(x, y_true, y_pred):
         # save_plot(x, 0, n=3, filename="x_data.png", show=True)
