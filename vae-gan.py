@@ -95,14 +95,14 @@ def summarize_performance(epoch, g_model, d_model, dataset, n_samples=100):
     _, acc_fake = d_model.evaluate(x_fake, y_fake, verbose=0)
     # summarize discriminator performance
     print(">Accuracy real: %.0f%%, fake: %.0f%%" % (acc_real * 100, acc_fake * 100))
-    with open("accuracy_metrics_{MODEL_NAME}.csv", "a") as f:
+    with open(f"accuracy_metrics_{MODEL_NAME}.csv", "a") as f:
         f.write(f"{acc_real},{acc_fake}\n")
     # save plot
     save_plot(x_fake, epoch)
     # save the generator model tile file
-    filename = "generator_model_{MODEL_NAME}_%03d.h5" % (epoch + 1)
+    filename = f"generator_model_{MODEL_NAME}_{epoch+1}.h5"
     g_model.save(filename)
-    filename = "discriminator_model_{MODEL_NAME}_%03d.h5" % (epoch + 1)
+    filename = f"discriminator_model_{MODEL_NAME}_{epoch+1}.h5"
     d_model.save(filename)
 
 
@@ -148,8 +148,8 @@ def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
                 f">{i+1}, {j+1}/{bat_per_epo}, d_loss_real={d_loss_real:.3f}, d_loss_fake={d_loss_fake:.3f}, g={g_loss:.3f}"
             )
             # epoch, batch, d_loss_real, d_loss_fake, g_loss
-            general_metrics = "{i+1},{j+1},d_loss_real,d_loss_fake,g_loss\n"
-            with open("general_metrics_{model_name}.csv", "a") as f:
+            general_metrics = f"{i+1},{j+1},{d_loss_real},{d_loss_fake},{g_loss}\n"
+            with open(f"general_metrics_{MODEL_NAME}.csv", "a") as f:
                 f.write(general_metrics)
         # evaluate the model performance, sometimes
         # if (i + 1) % 10 == 0:
@@ -195,7 +195,7 @@ def loss_wapper(g_model, alpha, beta):
         ae_loss = tf.math.scalar_mul(alpha, mse(x, y))
         gan_loss = tf.math.scalar_mul(beta, bce(y_true, y_pred))
         # TODO: tune alpha and beta
-        with open("alpha_beta_loss_{MODEL_NAME}.csv", "a") as f:
+        with open(f"alpha_beta_loss_{MODEL_NAME}.csv", "a") as f:
             f.write(f"{ae_loss},{gan_loss}\n")
         # print(f"ae_loss = {ae_loss} gan_loss = {gan_loss}")
         return ae_loss + gan_loss
