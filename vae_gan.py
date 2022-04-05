@@ -1,3 +1,6 @@
+import os
+from os.path import isdir
+
 import matplotlib as mpl
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -77,7 +80,7 @@ def save_plot(examples, epoch, n=10, filename="", show=False):
         pyplot.imshow(examples[i])
     # save plot to file
     if filename == "":
-        filename = "generated_plot_e%03d.png" % (epoch + 1)
+        filename = "./{MODEL_NAME}/generated_plot_e%03d.png" % (epoch + 1)
     if show:
         pyplot.show()
     pyplot.savefig(filename)
@@ -95,14 +98,14 @@ def summarize_performance(epoch, g_model, d_model, dataset, n_samples=100):
     _, acc_fake = d_model.evaluate(x_fake, y_fake, verbose=0)
     # summarize discriminator performance
     print(">Accuracy real: %.0f%%, fake: %.0f%%" % (acc_real * 100, acc_fake * 100))
-    with open(f"accuracy_metrics_{MODEL_NAME}.csv", "a") as f:
+    with open(f"./{MODEL_NAME}/accuracy_metrics_{MODEL_NAME}.csv", "a") as f:
         f.write(f"{acc_real},{acc_fake}\n")
     # save plot
     save_plot(x_fake, epoch)
     # save the generator model tile file
-    filename = f"generator_model_{MODEL_NAME}_{epoch+1}.h5"
+    filename = f"./{MODEL_NAME}/generator_model_{MODEL_NAME}_{epoch+1}.h5"
     g_model.save(filename)
-    filename = f"discriminator_model_{MODEL_NAME}_{epoch+1}.h5"
+    filename = f"./{MODEL_NAME}/discriminator_model_{MODEL_NAME}_{epoch+1}.h5"
     d_model.save(filename)
 
 
@@ -149,7 +152,7 @@ def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
             )
             # epoch, batch, d_loss_real, d_loss_fake, g_loss
             general_metrics = f"{i+1},{j+1},{d_loss_real},{d_loss_fake},{g_loss}\n"
-            with open(f"general_metrics_{MODEL_NAME}.csv", "a") as f:
+            with open(f"./{MODEL_NAME}/general_metrics_{MODEL_NAME}.csv", "a") as f:
                 f.write(general_metrics)
         # evaluate the model performance, sometimes
         # if (i + 1) % 10 == 0:
@@ -185,7 +188,7 @@ def loss_wapper(g_model, alpha, beta):
         gan = bce(y_true, y_pred)
         ae_loss = tf.math.scalar_mul(alpha, ae)
         gan_loss = tf.math.scalar_mul(beta, gan)
-        with open(f"alpha_beta_loss_{MODEL_NAME}.csv", "a") as f:
+        with open(f"./{MODEL_NAME}/alpha_beta_loss_{MODEL_NAME}.csv", "a") as f:
             f.write(f"{ae},{gan}\n")
         return ae_loss + gan_loss
 
@@ -211,6 +214,8 @@ class VAEGAN(tf.keras.Sequential):
 
 
 def main():
+    if not isdir(f"./{MODEL_NAME}"):
+        os.system(f"mkdir {MODEL_NAME}")
     # TODO:
     # - plot loss values for  a = 0, b = 1
     # - test models for a=0,b=1
