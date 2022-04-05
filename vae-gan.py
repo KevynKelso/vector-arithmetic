@@ -17,6 +17,7 @@ from tensorflow.python.keras.engine import data_adapter
 
 from gan import define_discriminator, generate_real_samples, load_real_samples
 
+MODEL_NAME = "aegan4"
 
 # AE VERSION 2, based almost entirely on discriminator / generator
 def ae(in_shape=(80, 80, 3)):
@@ -63,7 +64,7 @@ def ae(in_shape=(80, 80, 3)):
     return model
 
 
-def save_plot(examples, epoch, n=10):
+def save_plot(examples, epoch, n=10, filename="", show=False):
     # scale from [-1,1] to [0,1]
     examples = (examples + 1) / 2.0
     # plot images
@@ -75,7 +76,10 @@ def save_plot(examples, epoch, n=10):
         # plot raw pixel data
         pyplot.imshow(examples[i])
     # save plot to file
-    filename = "generated_plot_e%03d.png" % (epoch + 1)
+    if filename == "":
+        filename = "generated_plot_e%03d.png" % (epoch + 1)
+    if show:
+        pyplot.show()
     pyplot.savefig(filename)
     pyplot.close()
 
@@ -91,12 +95,14 @@ def summarize_performance(epoch, g_model, d_model, dataset, n_samples=100):
     _, acc_fake = d_model.evaluate(x_fake, y_fake, verbose=0)
     # summarize discriminator performance
     print(">Accuracy real: %.0f%%, fake: %.0f%%" % (acc_real * 100, acc_fake * 100))
+    with open("accuracy_metrics_{MODEL_NAME}.csv", "a") as f:
+        f.write(f"{acc_real},{acc_fake}\n")
     # save plot
     save_plot(x_fake, epoch)
     # save the generator model tile file
-    filename = "generator_model_ae3_%03d.h5" % (epoch + 1)
+    filename = "generator_model_{MODEL_NAME}_%03d.h5" % (epoch + 1)
     g_model.save(filename)
-    filename = "discriminator_model_ae3_%03d.h5" % (epoch + 1)
+    filename = "discriminator_model_{MODEL_NAME}_%03d.h5" % (epoch + 1)
     d_model.save(filename)
 
 
@@ -113,8 +119,8 @@ def generate_fake_samples(vae_model, n_samples, dataset):
     return X, y
 
 
-def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
-    # def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
+# def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
+def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
     bat_per_epo = int(dataset.shape[0] / n_batch)
     half_batch = int(n_batch / 2)
     # manually enumerate epochs
@@ -124,23 +130,27 @@ def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
             # get randomly selected 'real' samples
             X_real, y_real = generate_real_samples(dataset, half_batch)
             # update discriminator model weights
-            d_loss1, _ = d_model.train_on_batch(X_real, y_real)
+            d_loss_real, _ = d_model.train_on_batch(X_real, y_real)
             # generate 'fake' examples
             X_fake, y_fake = generate_fake_samples(ae_model, half_batch, dataset)
             # update discriminator model weights
-            d_loss2, _ = d_model.train_on_batch(X_fake, y_fake)
+            d_loss_fake, _ = d_model.train_on_batch(X_fake, y_fake)
             # prepare points in latent space as input for the generator
             ix = randint(0, dataset.shape[0], n_batch)
             X_gan = dataset[ix]
             # create inverted labels for the fake samples
             y_gan = ones((n_batch, 1))
             # update the generator via the discriminator's error
-            g_loss = gan_model.train_on_batch(X_gan, y_gan)
+            g_loss = gan_model.train_on_batch(X_gan, y_gan, return_dict=True)
+            g_loss = g_loss["loss"]
             # summarize loss on this batch
             print(
-                f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}, g={g_loss:.3f}"
-                # f">{i+1}, {j+1}/{bat_per_epo}, d1={d_loss1:.3f}, d2={d_loss2:.3f}"
+                f">{i+1}, {j+1}/{bat_per_epo}, d_loss_real={d_loss_real:.3f}, d_loss_fake={d_loss_fake:.3f}, g={g_loss:.3f}"
             )
+            # epoch, batch, d_loss_real, d_loss_fake, g_loss
+            general_metrics = "{i+1},{j+1},d_loss_real,d_loss_fake,g_loss\n"
+            with open("general_metrics_{model_name}.csv", "a") as f:
+                f.write(general_metrics)
         # evaluate the model performance, sometimes
         # if (i + 1) % 10 == 0:
         summarize_performance(i, ae_model, d_model, dataset)
@@ -150,8 +160,8 @@ def define_gan(g_model, d_model):
     # make weights in the discriminator not trainable
     d_model.trainable = False
     # connect them
-    model = Sequential()
-    # model = VAEGAN(g_model)
+    # model = Sequential()
+    model = VAEGAN(g_model)
     # add generator
     model.add(g_model)
 
@@ -167,8 +177,8 @@ def define_gan(g_model, d_model):
     model.add(d_model)
     # compile model
     opt = Adam(lr=0.0002, beta_1=0.5)
-    # model.compile(my_loss=loss_wapper(g_model, 1, 1), optimizer=opt)
-    model.compile(loss="binary_crossentropy", optimizer=opt)
+    model.compile(my_loss=loss_wapper(g_model, 1, 0), optimizer=opt)
+    # model.compile(loss="binary_crossentropy", optimizer=opt)
 
     return model
 
@@ -178,10 +188,16 @@ def loss_wapper(g_model, alpha, beta):
     bce = BinaryCrossentropy(from_logits=True)
 
     def loss(x, y_true, y_pred):
+        # save_plot(x, 0, n=3, filename="x_data.png", show=True)
         y = g_model(x)
-        ae_loss = alpha * mse(x, y)
-        gan_loss = beta * bce(y_true, y_pred)
-        print(f"ae_loss = {ae_loss} gan_loss = {gan_loss}")
+        # y data is just gray image...
+        # save_plot(y, 0, n=3, filename="y_data.png")
+        ae_loss = tf.math.scalar_mul(alpha, mse(x, y))
+        gan_loss = tf.math.scalar_mul(beta, bce(y_true, y_pred))
+        # TODO: tune alpha and beta
+        with open("alpha_beta_loss_{MODEL_NAME}.csv", "a") as f:
+            f.write(f"{ae_loss},{gan_loss}\n")
+        # print(f"ae_loss = {ae_loss} gan_loss = {gan_loss}")
         return ae_loss + gan_loss
 
     return loss
@@ -193,7 +209,6 @@ class VAEGAN(tf.keras.Sequential):
         self.my_loss = my_loss
 
     def train_step(self, data):
-        # data = data_adapter.expand_1d(data)
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
 
         with tf.GradientTape() as tape:
@@ -209,25 +224,8 @@ class VAEGAN(tf.keras.Sequential):
 def main():
     dataset = load_real_samples()
     d_model = define_discriminator()
-    ae_model = load_model("ae_generator_1.h5")
-    # ae_model = ae()  # AE model is generator
-    # early_stopping = EarlyStopping(
-    # monitor="loss", min_delta=0, patience=10, verbose=5, mode="auto"
-    # )
-    # opt = Adam(lr=0.0002, beta_1=0.5)
-    # ae_model.compile(optimizer=opt, loss='mse')
-
-    # ae_model.fit(x=dataset, y=dataset, epochs=10, batch_size=1, callbacks=[early_stopping])
-    # ae_model.save("ae_generator_1.h5")
-    # output_imgs = ae_model(dataset)
-    # output_imgs = (dataset + 1) / 2.0
-    # for i in range(20):
-    # pyplot.subplot(5, 4, i + 1)
-    # pyplot.axis("off")
-    # pyplot.imshow(output_imgs[i])
-    # pyplot.savefig("dataset_original.png")
-    # pyplot.close()
-    # return
+    # ae_model = load_model("ae_generator_1.h5")
+    ae_model = ae()  # AE model is generator
 
     gan_model = define_gan(ae_model, d_model)
 
