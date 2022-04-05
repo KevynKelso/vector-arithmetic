@@ -119,8 +119,8 @@ def generate_fake_samples(vae_model, n_samples, dataset):
     return X, y
 
 
-# def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
-def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
+def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=128):
+    # def train(ae_model, d_model, gan_model, dataset, n_epochs=100, n_batch=13):
     bat_per_epo = int(dataset.shape[0] / n_batch)
     half_batch = int(n_batch / 2)
     # manually enumerate epochs
