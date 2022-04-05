@@ -17,7 +17,7 @@ from tensorflow.python.keras.engine import data_adapter
 
 from gan import define_discriminator, generate_real_samples, load_real_samples
 
-MODEL_NAME = "aegan4"
+MODEL_NAME = "aegan5"
 
 # AE VERSION 2, based almost entirely on discriminator / generator
 def ae(in_shape=(80, 80, 3)):
@@ -165,19 +165,11 @@ def define_gan(g_model, d_model):
     # add generator
     model.add(g_model)
 
-    # def ae_loss(x, pred):
-    # x = K.flatten(x)
-    # pred = K.flatten(pred)
-    # reconst_loss = 1000 * K.mean(K.square(x - pred))
-    # return reconst_loss
-
-    # model.add_loss(ae_loss(model.input, model.output))
-
     # add the discriminator
     model.add(d_model)
     # compile model
     opt = Adam(lr=0.0002, beta_1=0.5)
-    model.compile(my_loss=loss_wapper(g_model, 1, 0), optimizer=opt)
+    model.compile(my_loss=loss_wapper(g_model, 0, 1), optimizer=opt)
     # model.compile(loss="binary_crossentropy", optimizer=opt)
 
     return model
@@ -188,16 +180,13 @@ def loss_wapper(g_model, alpha, beta):
     bce = BinaryCrossentropy()
 
     def loss(x, y_true, y_pred):
-        # save_plot(x, 0, n=3, filename="x_data.png", show=True)
         y = g_model(x)
-        # y data is just gray image...
-        # save_plot(y, 0, n=3, filename="y_data.png")
-        ae_loss = tf.math.scalar_mul(alpha, mse(x, y))
-        gan_loss = tf.math.scalar_mul(beta, bce(y_true, y_pred))
-        # TODO: tune alpha and beta
+        ae = mse(x, y)
+        gan = bce(y_true, y_pred)
+        ae_loss = tf.math.scalar_mul(alpha, ae)
+        gan_loss = tf.math.scalar_mul(beta, gan)
         with open(f"alpha_beta_loss_{MODEL_NAME}.csv", "a") as f:
-            f.write(f"{ae_loss},{gan_loss}\n")
-        # print(f"ae_loss = {ae_loss} gan_loss = {gan_loss}")
+            f.write(f"{ae},{gan}\n")
         return ae_loss + gan_loss
 
     return loss
@@ -222,6 +211,10 @@ class VAEGAN(tf.keras.Sequential):
 
 
 def main():
+    # TODO:
+    # - plot loss values for  a = 0, b = 1
+    # - test models for a=0,b=1
+    # -
     dataset = load_real_samples()
     d_model = define_discriminator()
     # ae_model = load_model("ae_generator_1.h5")
