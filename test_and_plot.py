@@ -21,11 +21,13 @@ def test_model():
 
 
 def main():
-    df = pd.read_csv("./alpha_beta_loss_aegan4.csv")
-    plt.title("Reconstruction loss")
+    df = pd.read_csv("./aegan5/data/alpha_beta_loss_aegan5.csv")
+    plt.title("Loss while training: alpha = 0, beta = 1")
     plt.xlabel("1/2 batch")
     plt.ylabel("loss")
-    plt.plot(df["ae_loss"])
+    plt.plot(df["ae_loss"], label="Reconstruction Loss")
+    plt.plot(df["gan_loss"], label="GAN loss")
+    plt.legend()
     plt.show()
 
 
