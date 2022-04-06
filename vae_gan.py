@@ -80,7 +80,7 @@ def save_plot(examples, epoch, n=10, filename="", show=False):
         pyplot.imshow(examples[i])
     # save plot to file
     if filename == "":
-        filename = "./{MODEL_NAME}/generated_plot_e%03d.png" % (epoch + 1)
+        filename = f"./{MODEL_NAME}/generated_plot_e{epoch+1}.png"
     if show:
         pyplot.show()
     pyplot.savefig(filename)
