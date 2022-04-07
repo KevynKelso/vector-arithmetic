@@ -8,14 +8,15 @@ from vae_gan import load_real_samples, save_plot
 
 # fzf = FzfPrompt()
 
-MODEL_NAME = "aegan4"
+MODEL_NAME = "aegan6"
 
 
-def test_model():
-    epoch = 23
+def test_model(epoch):
     dataset = load_real_samples()
     save_plot(dataset, 0, n=3, filename="dataset_orig.png", show=True)
-    generator_model = load_model(f"generator_model_{MODEL_NAME}_{epoch}.h5")
+    generator_model = load_model(
+        f"./{MODEL_NAME}/models/generator_model_{MODEL_NAME}_{epoch}.h5"
+    )
     y = generator_model(dataset)
     save_plot(y, 0, n=3, filename="e23_output.png", show=True)
 
@@ -43,6 +44,7 @@ def plot_discriminator_accuracy():
 
 
 def main():
+    test_model(5)
     plot_losses()
     plot_discriminator_accuracy()
 
