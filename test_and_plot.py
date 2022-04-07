@@ -20,15 +20,31 @@ def test_model():
     save_plot(y, 0, n=3, filename="e23_output.png", show=True)
 
 
-def main():
-    df = pd.read_csv("./aegan5/data/alpha_beta_loss_aegan5.csv")
-    plt.title("Loss while training: alpha = 0, beta = 1")
+def plot_losses():
+    df = pd.read_csv(f"./{MODEL_NAME}/data/alpha_beta_loss_{MODEL_NAME}.csv")
+    plt.title("Loss while training: alpha = 1, beta = 0")
     plt.xlabel("1/2 batch")
     plt.ylabel("loss")
     plt.plot(df["ae_loss"], label="Reconstruction Loss")
-    plt.plot(df["gan_loss"], label="GAN loss")
+    plt.plot(df["gan_loss"] * 0.005, label="GAN loss")
     plt.legend()
     plt.show()
+
+
+def plot_discriminator_accuracy():
+    df = pd.read_csv(f"./{MODEL_NAME}/data/accuracy_metrics_{MODEL_NAME}.csv")
+    plt.title("Discriminator Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy (%)")
+    plt.plot(df["acc_real"] * 100, label="Accuracy real")
+    plt.plot(df["acc_fake"] * 100, label="Accuracy fake")
+    plt.legend()
+    plt.show()
+
+
+def main():
+    plot_losses()
+    plot_discriminator_accuracy()
 
 
 if __name__ == "__main__":

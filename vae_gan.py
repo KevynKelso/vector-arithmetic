@@ -19,7 +19,7 @@ from tensorflow.python.keras.engine import data_adapter
 
 from gan import define_discriminator, generate_real_samples, load_real_samples
 
-MODEL_NAME = "aegan4"
+MODEL_NAME = "aegan6"
 
 # AE VERSION 2, based almost entirely on discriminator / generator
 def ae(in_shape=(80, 80, 3)):
@@ -172,8 +172,8 @@ def define_gan(g_model, d_model):
     # add the discriminator
     model.add(d_model)
     # compile model
-    opt = Adam(lr=0.0002, beta_1=0.5)
-    model.compile(my_loss=loss_wapper(g_model, 0, 1), optimizer=opt)
+    opt = Adam(lr=0.0001, beta_1=0.5)
+    model.compile(my_loss=loss_wapper(g_model, 1, 0.005), optimizer=opt)
     # model.compile(loss="binary_crossentropy", optimizer=opt)
 
     return model
@@ -227,10 +227,7 @@ def add_dirs():
 
 def main():
     add_dirs()
-    # TODO:
-    # - plot loss values for  a = 0, b = 1
-    # - test models for a=0,b=1
-    # -
+    # TODO: look at aegan5 on lica
     dataset = load_real_samples()
     d_model = define_discriminator()
     # ae_model = load_model("ae_generator_1.h5")
