@@ -20,7 +20,7 @@ from tensorflow.python.keras.engine import data_adapter
 
 from gan import define_discriminator, generate_real_samples, load_real_samples
 
-MODEL_NAME = "aegan_a_1_b_05"
+MODEL_NAME = "aegan_a_1_b_1"
 
 # AE VERSION 2, based almost entirely on discriminator / generator
 def ae(in_shape=(80, 80, 3)):
@@ -174,7 +174,7 @@ def define_gan(g_model, d_model):
     model.add(d_model)
     # compile model
     opt = Adam(lr=0.0001, beta_1=0.5)
-    model.compile(my_loss=loss_wapper(g_model, 1, 0.05), optimizer=opt)
+    model.compile(my_loss=loss_wapper(g_model, 1, 1), optimizer=opt)
     # model.compile(loss="binary_crossentropy", optimizer=opt)
 
     return model
